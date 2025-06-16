@@ -72,8 +72,14 @@ class ODESolverApp:
         ttk.Button(button_frame, text="Очистить", command=self.clear_all).pack(side='right')
 
     def setup_results_tab(self):
-        self.results_text = scrolledtext.ScrolledText(self.results_frame, wrap=tk.WORD)
+        self.results_text = scrolledtext.ScrolledText(self.results_frame, wrap=tk.WORD, undo=True)
         self.results_text.pack(fill='both', expand=True, padx=10, pady=10)
+
+        self.results_text.bind("<Control-c>", self.copy_text)
+        self.results_text.bind("<Control-v>", self.paste_text)
+        self.results_text.bind("<Control-x>", self.cut_text)
+        self.results_text.bind("<Control-a>", self.select_all_text)
+        self.results_text.bind("<Delete>", self.clear_text)
         self.results_text.config(state=tk.DISABLED)
 
     def setup_plot_tab(self):
@@ -81,6 +87,33 @@ class ODESolverApp:
         self.fig.tight_layout(pad=5.0)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill='both', expand=True, padx=10, pady=10)
+
+    def copy_text(self, event=None):
+        try:
+            self.root.clipboard_clear()
+            selection = self.results_text.selection_get()
+            self.root.clipboard_append(selection)
+        except tk.TclError:
+            pass
+
+    def paste_text(self, event=None):
+        try:
+            self.results_text.insert(tk.INSERT, self.root.clipboard_get())
+        except tk.TclError:
+            pass
+
+    def cut_text(self, event=None):
+        self.copy_text()
+        self.results_text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+
+    def select_all_text(self, event=None):
+        self.results_text.tag_add(tk.SEL, "1.0", tk.END)
+        return 'break'
+
+    def clear_text(self, event=None):
+        self.results_text.config(state=tk.NORMAL)
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.config(state=tk.DISABLED)
 
     def load_demo_task(self):
         self.clear_all()
@@ -103,9 +136,7 @@ class ODESolverApp:
         self.t_end_entry.delete(0, tk.END)
         self.h_entry.delete(0, tk.END)
         self.params_entry.delete(0, tk.END)
-        self.results_text.config(state=tk.NORMAL)
-        self.results_text.delete(1.0, tk.END)
-        self.results_text.config(state=tk.DISABLED)
+        self.clear_text()
         self.ax1.clear()
         self.ax2.clear()
         self.canvas.draw()
